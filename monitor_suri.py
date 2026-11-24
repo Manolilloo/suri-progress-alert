@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
@@ -148,11 +149,23 @@ def format_number(value: float, decimals: int = 1) -> str:
     return f"{value:.{decimals}f}".replace(".", ",")
 
 
+def format_tracker_time(value: str) -> str:
+    """Show the tracker timestamp in the user's Madrid timezone."""
+    try:
+        updated = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if updated.tzinfo is None:
+            updated = updated.replace(tzinfo=timezone.utc)
+        return updated.astimezone(ZoneInfo("Europe/Madrid")).strftime("%H:%M")
+    except (ValueError, TypeError):
+        return datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M")
+
+
 def send_notification(
     topic: str,
     current: float,
     fps: float,
     leader_name: str,
+    updated: str,
     test: bool = False,
 ) -> None:
     topic = topic.strip()
@@ -168,17 +181,21 @@ def send_notification(
         fps_text = format_number(fps)
 
     leader_name = (leader_name or "—").strip()
-    prefix = "🧪 " if test else ""
-    message = f"{prefix}{current_text} % ⚡ {fps_text} FPS | {leader_name}"
+    title = "PRUEBA - PORTWATCH VI" if test else "PORTWATCH VI"
+    updated_text = format_tracker_time(updated)
+    message = (
+        f"{current_text} %\\n"
+        f"⚡ {fps_text} FPS | {leader_name}\\n\\n"
+        f"Actualizado: {updated_text} · Seguimiento automático"
+    )
 
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
     request = urllib.request.Request(
         url,
-        # A single real body line: no empty title/body pair or extra blank row.
         data=message.encode("utf-8"),
         method="POST",
         headers={
-            "Title": "=?UTF-8?B?4oCL?=",  # Invisible title prevents ntfy showing the random topic name.
+            "Title": title,
             "Priority": "high",
             "Click": PAGE_URL,
             "Content-Type": "text/plain; charset=utf-8",
@@ -225,7 +242,7 @@ def main() -> int:
     # Notify on any SURI percentage increase, any FPS change (up or down),
     # or a change in the public race leader.
     if score_increased or fps_changed or leader_changed:
-        send_notification(ntfy_topic, current, fps, leader_name)
+        send_notification(ntfy_topic, current, fps, leader_name, updated)
         print(
             "Notificación enviada: "
             f"score_increased={score_increased}, fps_changed={fps_changed}, "
