@@ -119,21 +119,135 @@ def find_suri(data: dict) -> dict:
     return matches[0]
 
 
-def send_notification(topic: str, previous: float, current: float, updated: str) -> None:
+def track_step(value: object, steps: list[tuple[float, str]]) -> str:
+    number = clamp01(value)
+    eligible = [label for threshold, label in steps if number >= threshold]
+    return eligible[-1] if eligible else steps[0][1]
+
+
+def format_tracker_time(value: str) -> str:
+    if not value:
+        return "Sin fecha indicada"
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return moment.astimezone().strftime("%d/%m/%Y · %H:%M")
+    except ValueError:
+        return value
+
+
+def send_notification(
+    topic: str,
+    previous: float,
+    current: float,
+    updated: str,
+    effort: dict,
+) -> None:
     topic = topic.strip()
     if not topic:
         raise RuntimeError("Falta el secreto NTFY_TOPIC en GitHub Actions.")
 
+    gta = effort.get("gta") or {}
     delta = round_one_decimal(current - previous)
-    title = f"SURI ha subido al {current:.1f}%"
-    message = (
-        f"{previous:.1f}%  →  {current:.1f}%\n"
-        f"+{delta:.1f} puntos porcentuales\\n\\n"
-        f"El port de GTA VI para PC ha avanzado.\\n"
-        f"Datos de PortWatch: {updated or 'fecha no indicada'}\\n\\n"
-        "Toca la notificación para abrir el seguimiento."
-    )
+    current_text = f"{current:.1f}".replace(".", ",")
+    previous_text = f"{previous:.1f}".replace(".", ",")
+    delta_text = f"{delta:.1f}".replace(".", ",")
+
+    filled = max(0, min(20, int(round(current / 5))))
+    progress_bar = "█" * filled + "░" * (20 - filled)
+
+    if ladder_value(gta.get("playable")) >= 1:
+        milestone = "Jugable · personaje controlable"
+    elif ladder_value(gta.get("world")) >= 1:
+        milestone = "En el mundo · historia cargada"
+    elif ladder_value(gta.get("menu")) >= 1:
+        milestone = "Menú principal"
+    elif ladder_value(gta.get("boots")) >= 1:
+        milestone = "Primer fotograma"
+    elif ladder_value(gta.get("loads")) >= 1:
+        milestone = "Ejecutable en marcha"
+    else:
+        milestone = "Trabajo de base"
+
+    story = track_step(gta.get("story"), [
+        (0.0, "Atrapado en la apertura"),
+        (0.1, "Prólogo superado"),
+        (0.25, "Primeras misiones"),
+        (0.4, "Primer acto"),
+        (0.6, "Mitad de la historia"),
+        (0.85, "Historia principal completada"),
+        (1.0, "Juego completado al 100%"),
+    ])
+    rendering = track_step(gta.get("render"), [
+        (0.0, "Imagen negra o rota"),
+        (0.25, "Formas dibujadas, iluminación incompleta"),
+        (0.5, "Iluminación presente, efectos pendientes"),
+        (0.75, "Casi como consola, con fallos menores"),
+        (1.0, "Imagen equivalente a consola"),
+    ])
+    stability = {
+        "unknown": "Sin datos",
+        "constant": "Se cierra constantemente",
+        "often": "Fallos frecuentes",
+        "sometimes": "Fallos ocasionales",
+        "rarely": "Pocos fallos",
+        "stable": "Estable",
+    }.get(str(gta.get("stability") or "unknown"), "Sin datos")
+
+    fps = float(gta.get("fps") or 0.0)
+    fps_text = f"{fps:g} FPS reportados" if fps > 0 else "Sin medición disponible"
+    updated_text = format_tracker_time(updated)
+
+    title = f"SURI +{delta_text} -> {current_text}%"
+    message = f"""# 🚀 SURI HA AVANZADO
+
+## {current_text} %
+
+> 📈 **+{delta_text} puntos** desde la última comprobación.
+
+---
+
+### 📊 PROGRESO PORTWATCH
+
+**{progress_bar}**
+
+**{current_text} / 100 puntos**
+
+### 🎮 ESTADO DEL PROYECTO
+
+- **Hito:** {milestone}
+- **Rendimiento:** {fps_text}
+- **Renderizado:** {rendering}
+- **Historia:** {story}
+- **Estabilidad:** {stability}
+
+---
+
+### 🧭 DETALLES DEL CAMBIO
+
+- Antes: **{previous_text}%**
+- Ahora: **{current_text}%**
+- Incremento: **+{delta_text} puntos porcentuales**
+- Datos publicados: *{updated_text}*
+
+[🔎 Abrir ficha de SURI en PortWatch](https://portwatch-vi.xyz/#effort-suri)
+
+---
+
+*Fuente: PortWatch VI · Monitor automático*
+
+> Esta cifra es la puntuación de progreso de PortWatch, no el porcentaje literal de juego terminado. Se avisa de cualquier subida publicada, incluso de una décima.
+"""
+
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
+    icon_url = (
+        "https://raw.githubusercontent.com/Manolilloo/suri-progress-alert/"
+        "main/assets/suri-notification-icon.png?v=28633272"
+    )
+    actions = (
+        f"view, Abrir ficha, {PAGE_URL}, clear=true; "
+        f"copy, Copiar %, {current_text}%; "
+        "view, Metodologia, https://portwatch-vi.xyz/#method"
+    )
     request = urllib.request.Request(
         url,
         data=message.encode("utf-8"),
@@ -141,9 +255,12 @@ def send_notification(topic: str, previous: float, current: float, updated: str)
         headers={
             "Title": title,
             "Priority": "high",
-            "Tags": "rocket,chart_with_upwards_trend",
+            "Tags": "rocket,chart_with_upwards_trend,video_game",
+            "Icon": icon_url,
             "Click": PAGE_URL,
-            "Content-Type": "text/plain; charset=utf-8",
+            "Actions": actions,
+            "Markdown": "yes",
+            "Content-Type": "text/markdown",
         },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -170,7 +287,7 @@ def main() -> int:
     print(f"SURI: {current:.1f}% | referencia: {previous:.1f}% | tracker: {updated}")
 
     if current > previous:
-        send_notification(ntfy_topic, previous, current, updated)
+        send_notification(ntfy_topic, previous, current, updated, suri)
         print(f"Notificación enviada: {previous:.1f}% -> {current:.1f}%")
     elif current < previous:
         print("El valor ha bajado; se ajusta la referencia sin notificación.")
