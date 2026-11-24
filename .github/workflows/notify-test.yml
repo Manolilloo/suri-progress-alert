@@ -76,7 +76,7 @@ jobs:
                   "Click": page_url,
                   "Actions": (
                       f"view, Abrir ficha, {page_url}, clear=true; "
-                      "copy, Copiar 61,5%, 61,5%; "
+                      "copy, Copiar porcentaje, 61.5%; "
                       "view, Metodologia, https://portwatch-vi.xyz/#method"
                   ),
                   "Markdown": "yes",
