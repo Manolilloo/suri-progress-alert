@@ -184,8 +184,8 @@ def send_notification(
     title = "PRUEBA - PORTWATCH VI" if test else "PORTWATCH VI"
     updated_text = format_tracker_time(updated)
     message = (
-        f"{current_text} %\\n"
-        f"⚡ {fps_text} FPS | {leader_name}\\n\\n"
+        f"{current_text} %\n"
+        f"⚡ {fps_text} FPS | {leader_name}\n\n"
         f"Actualizado: {updated_text} · Seguimiento automático"
     )
 
