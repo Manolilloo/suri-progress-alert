@@ -2,10 +2,6 @@ name: Probar notificación móvil
 # Último simulacro visual solicitado desde el chat.
 
 on:
-  push:
-    paths:
-      - ".github/workflows/notify-test.yml"
-      - "monitor_suri.py"
   workflow_dispatch:
 
 jobs:
@@ -41,9 +37,7 @@ jobs:
           fps = round_one_decimal(float((suri.get("gta") or {}).get("fps") or 0))
           leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
           score = score_effort(suri)
-          updated = str(data.get("updated") or "")
-
-          print(f"Simulacro visual: {score:.1f}% | {fps:g} FPS | líder: {leader_name} | tracker: {updated}")
-          send_notification(topic, score, fps, leader_name, updated, test=True)
-          print("ntfy aceptó el simulacro con título, datos y hora de actualización.")
+          print(f"Simulacro visual: {score:.1f}% | {fps:g} FPS | líder: {leader_name}")
+          send_notification(topic, score, fps, leader_name)
+          print("ntfy aceptó el simulacro de dos líneas.")
           PY

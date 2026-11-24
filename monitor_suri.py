@@ -11,7 +11,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
@@ -149,24 +148,11 @@ def format_number(value: float, decimals: int = 1) -> str:
     return f"{value:.{decimals}f}".replace(".", ",")
 
 
-def format_tracker_time(value: str) -> str:
-    """Show the tracker timestamp in the user's Madrid timezone."""
-    try:
-        updated = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if updated.tzinfo is None:
-            updated = updated.replace(tzinfo=timezone.utc)
-        return updated.astimezone(ZoneInfo("Europe/Madrid")).strftime("%H:%M")
-    except (ValueError, TypeError):
-        return datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M")
-
-
 def send_notification(
     topic: str,
     current: float,
     fps: float,
     leader_name: str,
-    updated: str,
-    test: bool = False,
 ) -> None:
     topic = topic.strip()
     if not topic:
@@ -182,11 +168,7 @@ def send_notification(
 
     leader_name = (leader_name or "—").strip()
     title = "Progreso GTAVI"
-    updated_text = format_tracker_time(updated)
-    message = (
-        f"{current_text} % ⚡ {fps_text} FPS | {leader_name}\n"
-        f"{updated_text}"
-    )
+    message = f"{current_text} % ⚡ {fps_text} FPS | {leader_name}"
 
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
     request = urllib.request.Request(
@@ -241,7 +223,7 @@ def main() -> int:
     # Notify on any SURI percentage increase, any FPS change (up or down),
     # or a change in the public race leader.
     if score_increased or fps_changed or leader_changed:
-        send_notification(ntfy_topic, current, fps, leader_name, updated)
+        send_notification(ntfy_topic, current, fps, leader_name)
         print(
             "Notificación enviada: "
             f"score_increased={score_increased}, fps_changed={fps_changed}, "
