@@ -245,7 +245,7 @@ def send_notification(
     )
     actions = (
         f"view, Abrir ficha, {PAGE_URL}, clear=true; "
-        f"copy, Copiar %, {current_text}%; "
+        f"copy, Copiar porcentaje, {current:.1f}%; "
         "view, Metodologia, https://portwatch-vi.xyz/#method"
     )
     request = urllib.request.Request(
