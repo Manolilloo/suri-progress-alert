@@ -127,7 +127,7 @@ def send_notification(topic: str, previous: float, current: float, updated: str)
     delta = round_one_decimal(current - previous)
     title = f"SURI ha subido al {current:.1f}%"
     message = (
-        f"{previous:.1f}%  →  {current:.1f}%\\n"
+        f"{previous:.1f}%  →  {current:.1f}%\n"
         f"+{delta:.1f} puntos porcentuales\\n\\n"
         f"El port de GTA VI para PC ha avanzado.\\n"
         f"Datos de PortWatch: {updated or 'fecha no indicada'}\\n\\n"
