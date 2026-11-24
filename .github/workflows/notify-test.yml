@@ -40,8 +40,9 @@ jobs:
           fps = round_one_decimal(float((suri.get("gta") or {}).get("fps") or 0))
           leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
           score = score_effort(suri)
+          updated = str(data.get("updated") or "")
 
-          print(f"Simulacro visual: {score:.1f}% | {fps:g} FPS | líder: {leader_name}")
-          send_notification(topic, score, fps, leader_name, test=True)
-          print("ntfy aceptó el simulacro de una línea.")
+          print(f"Simulacro visual: {score:.1f}% | {fps:g} FPS | líder: {leader_name} | tracker: {updated}")
+          send_notification(topic, score, fps, leader_name, updated, test=True)
+          print("ntfy aceptó el simulacro con título, datos y hora de actualización.")
           PY
