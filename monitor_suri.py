@@ -178,6 +178,7 @@ def send_notification(
         data=message.encode("utf-8"),
         method="POST",
         headers={
+            "Title": "=?UTF-8?B?4oCL?=",  # Invisible title prevents ntfy showing the random topic name.
             "Priority": "high",
             "Click": PAGE_URL,
             "Content-Type": "text/plain; charset=utf-8",
