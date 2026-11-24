@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import math
 import os
@@ -170,16 +169,15 @@ def send_notification(
 
     leader_name = (leader_name or "—").strip()
     prefix = "🧪 " if test else ""
-    title = f"{prefix}{current_text} % ⚡ {fps_text} FPS | {leader_name}"
+    message = f"{prefix}{current_text} % ⚡ {fps_text} FPS | {leader_name}"
 
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
     request = urllib.request.Request(
         url,
-        # Invisible body: keep the Android notification to one visible line.
-        data="\u200b".encode("utf-8"),
+        # A single real body line: no empty title/body pair or extra blank row.
+        data=message.encode("utf-8"),
         method="POST",
         headers={
-            "Title": f"=?UTF-8?B?{base64.b64encode(title.encode('utf-8')).decode('ascii')}?=",
             "Priority": "high",
             "Click": PAGE_URL,
             "Content-Type": "text/plain; charset=utf-8",
