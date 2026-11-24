@@ -1,0 +1,49 @@
+name: Probar notificación móvil
+
+on:
+  push:
+    paths:
+      - ".github/workflows/notify-test.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Enviar simulacro a ntfy
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          python - <<'PY'
+          import os
+          import urllib.request
+
+          topic = os.environ.get("NTFY_TOPIC", "").strip()
+          if not topic:
+              raise SystemExit("Falta el secreto NTFY_TOPIC.")
+
+          message = (
+              "SIMULACRO DE NOTIFICACIÓN\n\n"
+              "¡La conexión con tu móvil funciona!\n"
+              "Esta es una prueba del aviso de progreso de SURI. "
+              "No representa una subida real del porcentaje.\n\n"
+              "Cuando SURI avance, recibirás aquí el porcentaje anterior, "
+              "el nuevo y la diferencia."
+          )
+          request = urllib.request.Request(
+              "https://ntfy.sh/" + topic,
+              data=message.encode("utf-8"),
+              method="POST",
+              headers={
+                  "Title": "PRUEBA · Alertas de SURI",
+                  "Priority": "high",
+                  "Tags": "test_tube,white_check_mark",
+                  "Click": "https://portwatch-vi.xyz/#effort-suri",
+                  "Content-Type": "text/plain; charset=utf-8",
+              },
+          )
+
+          with urllib.request.urlopen(request, timeout=20) as response:
+              print("ntfy aceptó la notificación de prueba. HTTP", response.status)
+          PY
