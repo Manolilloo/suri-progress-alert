@@ -181,12 +181,11 @@ def send_notification(
         fps_text = format_number(fps)
 
     leader_name = (leader_name or "—").strip()
-    title = "PRUEBA - PORTWATCH VI" if test else "PORTWATCH VI"
+    title = "Progreso GTAVI"
     updated_text = format_tracker_time(updated)
     message = (
-        f"{current_text} %\n"
-        f"⚡ {fps_text} FPS | {leader_name}\n\n"
-        f"Actualizado: {updated_text} · Seguimiento automático"
+        f"{current_text} % ⚡ {fps_text} FPS | {leader_name}\n"
+        f"{updated_text}"
     )
 
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
