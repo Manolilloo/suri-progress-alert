@@ -1,4 +1,5 @@
 name: Probar notificación móvil
+# Último simulacro visual solicitado desde el chat.
 
 on:
   push:
