@@ -150,6 +150,9 @@ def send_notification(topic: str, previous: float, current: float, updated: str)
 
 
 def main() -> int:
+    ntfy_topic = os.environ.get("NTFY_TOPIC", "").strip()
+    if not ntfy_topic:
+        raise RuntimeError("Falta el secreto NTFY_TOPIC. Añádelo en Settings > Secrets and variables > Actions.")
     if not STATE_FILE.exists():
         raise RuntimeError("No existe state.json.")
 
@@ -165,7 +168,7 @@ def main() -> int:
     print(f"SURI: {current:.1f}% | referencia: {previous:.1f}% | tracker: {updated}")
 
     if current > previous:
-        send_notification(os.environ.get("NTFY_TOPIC", ""), previous, current, updated)
+        send_notification(ntfy_topic, previous, current, updated)
         print(f"Notificación enviada: {previous:.1f}% -> {current:.1f}%")
     elif current < previous:
         print("El valor ha bajado; se ajusta la referencia sin notificación.")
