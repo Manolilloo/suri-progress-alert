@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import math
 import os
@@ -178,7 +179,7 @@ def send_notification(
         data="\u200b".encode("utf-8"),
         method="POST",
         headers={
-            "Title": title,
+            "Title": f"=?UTF-8?B?{base64.b64encode(title.encode('utf-8')).decode('ascii')}?=",
             "Priority": "high",
             "Click": PAGE_URL,
             "Content-Type": "text/plain; charset=utf-8",
