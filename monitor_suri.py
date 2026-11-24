@@ -13,6 +13,7 @@ import urllib.request
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 DATA_URL = "https://portwatch-vi.xyz/data/tracker.json"
 PAGE_URL = "https://portwatch-vi.xyz/#effort-suri"
@@ -130,7 +131,7 @@ def format_tracker_time(value: str) -> str:
         return "Sin fecha indicada"
     try:
         moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return moment.astimezone().strftime("%d/%m/%Y · %H:%M")
+        return moment.astimezone(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y · %H:%M")
     except ValueError:
         return value
 
