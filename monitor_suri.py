@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Watch the PortWatch VI score for SURI and notify via ntfy."""
+"""Watch SURI's PortWatch score, FPS and the public race leader; notify via ntfy."""
 
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ import urllib.request
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 DATA_URL = "https://portwatch-vi.xyz/data/tracker.json"
 PAGE_URL = "https://portwatch-vi.xyz/#effort-suri"
@@ -48,7 +47,7 @@ def ladder_value(value: object) -> float:
 
 
 def round_one_decimal(value: float) -> float:
-    # Matches JavaScript Math.round(value * 10) / 10, not Python's bankers' rounding.
+    """Match JavaScript Math.round(value * 10) / 10."""
     rounded = Decimal(str(value * 10)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
     return float(rounded / Decimal("10"))
 
@@ -120,148 +119,69 @@ def find_suri(data: dict) -> dict:
     return matches[0]
 
 
-def track_step(value: object, steps: list[tuple[float, str]]) -> str:
-    number = clamp01(value)
-    eligible = [label for threshold, label in steps if number >= threshold]
-    return eligible[-1] if eligible else steps[0][1]
+def find_leader(data: dict) -> dict | None:
+    """Match PortWatch's public-code race: private builds are unranked."""
+    ranked = []
+    for effort in data.get("efforts", []):
+        if not isinstance(effort, dict):
+            continue
+        if effort.get("tier") != "tracked" or effort.get("nuked"):
+            continue
+        repository = effort.get("repo")
+        if not isinstance(repository, str) or "/" not in repository:
+            continue
+        stars = (effort.get("stats") or {}).get("stars") or 0
+        try:
+            stars = float(stars)
+        except (TypeError, ValueError):
+            stars = 0.0
+        ranked.append((score_effort(effort), stars, effort))
+
+    if not ranked:
+        return None
+    # Same order as PortWatch: highest score first, stars break a tie.
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return ranked[0][2]
 
 
-def format_tracker_time(value: str) -> str:
-    if not value:
-        return "Sin fecha indicada"
-    try:
-        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return moment.astimezone(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y · %H:%M")
-    except ValueError:
-        return value
+def format_number(value: float, decimals: int = 1) -> str:
+    return f"{value:.{decimals}f}".replace(".", ",")
 
 
 def send_notification(
     topic: str,
-    previous: float,
     current: float,
-    updated: str,
-    effort: dict,
+    fps: float,
+    leader_name: str,
+    test: bool = False,
 ) -> None:
     topic = topic.strip()
     if not topic:
         raise RuntimeError("Falta el secreto NTFY_TOPIC en GitHub Actions.")
 
-    gta = effort.get("gta") or {}
-    delta = round_one_decimal(current - previous)
-    current_text = f"{current:.1f}".replace(".", ",")
-    previous_text = f"{previous:.1f}".replace(".", ",")
-    delta_text = f"{delta:.1f}".replace(".", ",")
-
-    filled = max(0, min(20, int(round(current / 5))))
-    progress_bar = "█" * filled + "░" * (20 - filled)
-
-    if ladder_value(gta.get("playable")) >= 1:
-        milestone = "Jugable · personaje controlable"
-    elif ladder_value(gta.get("world")) >= 1:
-        milestone = "En el mundo · historia cargada"
-    elif ladder_value(gta.get("menu")) >= 1:
-        milestone = "Menú principal"
-    elif ladder_value(gta.get("boots")) >= 1:
-        milestone = "Primer fotograma"
-    elif ladder_value(gta.get("loads")) >= 1:
-        milestone = "Ejecutable en marcha"
+    current_text = format_number(current)
+    if not math.isfinite(fps) or fps <= 0:
+        fps_text = "—"
+    elif fps.is_integer():
+        fps_text = str(int(fps))
     else:
-        milestone = "Trabajo de base"
+        fps_text = format_number(fps)
 
-    story = track_step(gta.get("story"), [
-        (0.0, "Atrapado en la apertura"),
-        (0.1, "Prólogo superado"),
-        (0.25, "Primeras misiones"),
-        (0.4, "Primer acto"),
-        (0.6, "Mitad de la historia"),
-        (0.85, "Historia principal completada"),
-        (1.0, "Juego completado al 100%"),
-    ])
-    rendering = track_step(gta.get("render"), [
-        (0.0, "Imagen negra o rota"),
-        (0.25, "Formas dibujadas, iluminación incompleta"),
-        (0.5, "Iluminación presente, efectos pendientes"),
-        (0.75, "Casi como consola, con fallos menores"),
-        (1.0, "Imagen equivalente a consola"),
-    ])
-    stability = {
-        "unknown": "Sin datos",
-        "constant": "Se cierra constantemente",
-        "often": "Fallos frecuentes",
-        "sometimes": "Fallos ocasionales",
-        "rarely": "Pocos fallos",
-        "stable": "Estable",
-    }.get(str(gta.get("stability") or "unknown"), "Sin datos")
-
-    fps = float(gta.get("fps") or 0.0)
-    fps_text = f"{fps:g} FPS reportados" if fps > 0 else "Sin medición disponible"
-    updated_text = format_tracker_time(updated)
-
-    title = f"SURI +{delta_text} -> {current_text}%"
-    message = f"""# 🚀 SURI HA AVANZADO
-
-## {current_text} %
-
-> 📈 **+{delta_text} puntos** desde la última comprobación.
-
----
-
-### 📊 PROGRESO PORTWATCH
-
-**{progress_bar}**
-
-**{current_text} / 100 puntos**
-
-### 🎮 ESTADO DEL PROYECTO
-
-- **Hito:** {milestone}
-- **Rendimiento:** {fps_text}
-- **Renderizado:** {rendering}
-- **Historia:** {story}
-- **Estabilidad:** {stability}
-
----
-
-### 🧭 DETALLES DEL CAMBIO
-
-- Antes: **{previous_text}%**
-- Ahora: **{current_text}%**
-- Incremento: **+{delta_text} puntos porcentuales**
-- Datos publicados: *{updated_text}*
-
-[🔎 Abrir ficha de SURI en PortWatch](https://portwatch-vi.xyz/#effort-suri)
-
----
-
-*Fuente: PortWatch VI · Monitor automático*
-
-> Esta cifra es la puntuación de progreso de PortWatch, no el porcentaje literal de juego terminado. Se avisa de cualquier subida publicada, incluso de una décima.
-"""
+    leader_name = (leader_name or "—").strip()
+    prefix = "🧪 " if test else ""
+    title = f"{prefix}{current_text} % ⚡ {fps_text} FPS | {leader_name}"
 
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
-    icon_url = (
-        "https://raw.githubusercontent.com/Manolilloo/suri-progress-alert/"
-        "main/assets/suri-notification-icon.png?v=28633272"
-    )
-    actions = (
-        f"view, Abrir ficha, {PAGE_URL}, clear=true; "
-        f"copy, Copiar porcentaje, {current:.1f}%; "
-        "view, Metodologia, https://portwatch-vi.xyz/#method"
-    )
     request = urllib.request.Request(
         url,
-        data=message.encode("utf-8"),
+        # Invisible body: keep the Android notification to one visible line.
+        data="\u200b".encode("utf-8"),
         method="POST",
         headers={
             "Title": title,
             "Priority": "high",
-            "Tags": "rocket,chart_with_upwards_trend,video_game",
-            "Icon": icon_url,
             "Click": PAGE_URL,
-            "Actions": actions,
-            "Markdown": "yes",
-            "Content-Type": "text/markdown",
+            "Content-Type": "text/plain; charset=utf-8",
         },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -285,25 +205,48 @@ def main() -> int:
     current = score_effort(suri)
     previous = float(state["last_score"])
     updated = str(data.get("updated") or "")
-    print(f"SURI: {current:.1f}% | referencia: {previous:.1f}% | tracker: {updated}")
 
-    if current > previous:
-        send_notification(ntfy_topic, previous, current, updated, suri)
-        print(f"Notificación enviada: {previous:.1f}% -> {current:.1f}%")
+    gta = suri.get("gta") or {}
+    fps = round_one_decimal(float(gta.get("fps") or 0.0))
+    leader = find_leader(data)
+    leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
+
+    last_fps = state.get("last_fps")
+    fps_changed = last_fps is not None and round_one_decimal(float(last_fps)) != fps
+    last_leader = state.get("last_leader")
+    leader_changed = last_leader is not None and str(last_leader) != leader_name
+    score_increased = current > previous
+
+    print(
+        f"SURI: {current:.1f}% | FPS: {fps:g} | líder público: {leader_name} "
+        f"| referencia: {previous:.1f}% | tracker: {updated}"
+    )
+
+    # Notify on any SURI percentage increase, any FPS change (up or down),
+    # or a change in the public race leader.
+    if score_increased or fps_changed or leader_changed:
+        send_notification(ntfy_topic, current, fps, leader_name)
+        print(
+            "Notificación enviada: "
+            f"score_increased={score_increased}, fps_changed={fps_changed}, "
+            f"leader_changed={leader_changed}"
+        )
     elif current < previous:
-        print("El valor ha bajado; se ajusta la referencia sin notificación.")
+        print("El porcentaje bajó; se actualiza la referencia sin avisar.")
     else:
-        print("Sin subida; no se envía notificación.")
+        print("Sin cambios relevantes; no se envía notificación.")
 
     today = datetime.now(timezone.utc).date().isoformat()
-    state_changed = current != previous
+    new_values = {
+        "last_score": current,
+        "last_fps": fps,
+        "last_leader": leader_name,
+        "last_tracker_update": updated,
+        "last_check_date": today,
+    }
+    state_changed = any(state.get(key) != value for key, value in new_values.items())
     if state_changed:
-        state["last_score"] = current
-        state["last_tracker_update"] = updated
-    if state.get("last_check_date") != today:
-        state["last_check_date"] = today
-        state_changed = True
-    if state_changed:
+        state.update(new_values)
         STATE_FILE.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     return 0
 
