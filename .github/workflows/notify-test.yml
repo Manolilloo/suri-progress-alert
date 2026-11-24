@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/notify-test.yml"
+      - "monitor_suri.py"
   workflow_dispatch:
 
 jobs:
