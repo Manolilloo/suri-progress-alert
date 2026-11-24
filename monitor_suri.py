@@ -125,12 +125,13 @@ def send_notification(topic: str, previous: float, current: float, updated: str)
         raise RuntimeError("Falta el secreto NTFY_TOPIC en GitHub Actions.")
 
     delta = round_one_decimal(current - previous)
-    title = f"SURI sube a {current:.1f}%"
+    title = f"SURI ha subido al {current:.1f}%"
     message = (
-        f"El progreso de SURI ha aumentado de {previous:.1f}% a {current:.1f}% "
-        f"(+{delta:.1f} puntos).\n\n"
-        f"Datos de PortWatch actualizados: {updated or 'fecha no indicada'}.\n"
-        f"Abrir proyecto: {PAGE_URL}"
+        f"{previous:.1f}%  →  {current:.1f}%\\n"
+        f"+{delta:.1f} puntos porcentuales\\n\\n"
+        f"El port de GTA VI para PC ha avanzado.\\n"
+        f"Datos de PortWatch: {updated or 'fecha no indicada'}\\n\\n"
+        "Toca la notificación para abrir el seguimiento."
     )
     url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
     request = urllib.request.Request(
@@ -140,7 +141,8 @@ def send_notification(topic: str, previous: float, current: float, updated: str)
         headers={
             "Title": title,
             "Priority": "high",
-            "Tags": "chart_with_upwards_trend",
+            "Tags": "rocket,chart_with_upwards_trend",
+            "Click": PAGE_URL,
             "Content-Type": "text/plain; charset=utf-8",
         },
     )
