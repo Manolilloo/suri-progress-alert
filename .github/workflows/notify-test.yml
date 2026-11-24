@@ -11,39 +11,79 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Enviar simulacro a ntfy
+      - name: Enviar simulacro visual a ntfy
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           python - <<'PY'
           import os
+          import urllib.parse
           import urllib.request
 
           topic = os.environ.get("NTFY_TOPIC", "").strip()
           if not topic:
               raise SystemExit("Falta el secreto NTFY_TOPIC.")
 
-          message = (
-              "SIMULACRO DE NOTIFICACIÓN\n\n"
-              "¡La conexión con tu móvil funciona!\n"
-              "Esta es una prueba del aviso de progreso de SURI. "
-              "No representa una subida real del porcentaje.\n\n"
-              "Cuando SURI avance, recibirás aquí el porcentaje anterior, "
-              "el nuevo y la diferencia."
+          topic_url = "https://ntfy.sh/" + urllib.parse.quote(topic, safe="")
+          page_url = "https://portwatch-vi.xyz/#effort-suri"
+          icon_url = (
+              "https://raw.githubusercontent.com/Manolilloo/suri-progress-alert/"
+              "main/assets/suri-notification-icon.png?v=28633272"
           )
+          message = """# 🧪 SIMULACRO DE ALERTA SURI
+
+          ## 🚀 61,5 %
+
+          > 📈 **+0,5 puntos** (ejemplo ficticio)
+
+          ---
+
+          ### 📊 PROGRESO PORTWATCH
+
+          **████████████░░░░░░░░**
+
+          **61,5 / 100 puntos**
+
+          ### 🎮 ESTADO DEL PROYECTO
+
+          - **Hito:** Jugable · personaje controlable
+          - **Rendimiento:** 3 FPS reportados
+          - **Renderizado:** Casi como consola, con fallos menores
+          - **Estabilidad:** Sin datos
+
+          ---
+
+          ### ✅ CONEXIÓN
+
+          Si ves este aviso con el icono personalizado, el diseño nuevo está llegando a tu móvil.
+
+          [🔎 Abrir ficha de SURI en PortWatch](https://portwatch-vi.xyz/#effort-suri)
+
+          ---
+
+          *Esto es solo una prueba. No representa una subida real.*
+          """
+
           request = urllib.request.Request(
-              "https://ntfy.sh/" + topic,
+              topic_url,
               data=message.encode("utf-8"),
               method="POST",
               headers={
-                  "Title": "PRUEBA · Alertas de SURI",
+                  "Title": "SIMULACRO: SURI +0,5 -> 61,5%",
                   "Priority": "high",
-                  "Tags": "test_tube,white_check_mark",
-                  "Click": "https://portwatch-vi.xyz/#effort-suri",
-                  "Content-Type": "text/plain; charset=utf-8",
+                  "Tags": "rocket,chart_with_upwards_trend,test_tube",
+                  "Icon": icon_url,
+                  "Click": page_url,
+                  "Actions": (
+                      f"view, Abrir ficha, {page_url}, clear=true; "
+                      "copy, Copiar 61,5%, 61,5%; "
+                      "view, Metodologia, https://portwatch-vi.xyz/#method"
+                  ),
+                  "Markdown": "yes",
+                  "Content-Type": "text/markdown",
               },
           )
 
           with urllib.request.urlopen(request, timeout=20) as response:
-              print("ntfy aceptó la notificación de prueba. HTTP", response.status)
+              print("ntfy aceptó el simulacro visual. HTTP", response.status)
           PY
