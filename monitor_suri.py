@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Watch SURI's PortWatch score, FPS and the public race leader; notify via ntfy."""
 
+# Polling workflow refresh: keep the scheduled monitor active.
 from __future__ import annotations
 
 import json
