@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Watch SURI's PortWatch score, FPS and the public race leader; notify via ntfy."""
+Watch PortWatch's highest overall progress score and current leader; notify via ntfy.
 
 # Polling workflow refresh: keep the scheduled monitor active.
 from __future__ import annotations
@@ -16,7 +16,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 DATA_URL = "https://portwatch-vi.xyz/data/tracker.json"
-PAGE_URL = "https://portwatch-vi.xyz/#effort-suri"
+PAGE_URL = "https://portwatch-vi.xyz/"
 STATE_FILE = Path("state.json")
 
 LADDER_TICKS = {"loads": 10.0, "boots": 20.0, "menu": 30.0, "world": 40.0, "playable": 50.0}
@@ -119,26 +119,14 @@ def fetch_tracker() -> dict:
     return data
 
 
-def find_suri(data: dict) -> dict:
-    matches = [
-        effort for effort in data["efforts"]
-        if isinstance(effort, dict) and effort.get("id") == "suri"
-    ]
-    if len(matches) != 1:
-        raise RuntimeError(
-            f"Se esperaba un único proyecto con id 'suri'; encontrados: {len(matches)}."
-        )
-    return matches[0]
-
-
 def find_leader(data: dict) -> dict | None:
-    """Match PortWatch overall(): every non-nuked effort participates."""
+    """Match PortWatch overall(): every active project, including private builds."""
     ranked = [
         effort for effort in data.get("efforts", [])
         if isinstance(effort, dict) and not effort.get("nuked")
     ]
     if not ranked:
-        return None
+        raise RuntimeError("PortWatch no contiene proyectos activos para calcular el líder.")
 
     def stars(effort: dict) -> float:
         try:
@@ -205,40 +193,44 @@ def main() -> int:
         raise RuntimeError("state.json no contiene un last_score numérico.")
 
     data = fetch_tracker()
-    suri = find_suri(data)
-    current = score_effort(suri)
+    leader = find_leader(data)
+    current = score_effort(leader)
     previous = float(state["last_score"])
     updated = str(data.get("updated") or "")
 
-    gta = suri.get("gta") or {}
+    leader_id = str(leader.get("id") or "")
+    leader_name = str(leader.get("name") or leader_id or "—")
+    gta = leader.get("gta") or {}
     fps = round_one_decimal(float(gta.get("fps") or 0.0))
-    leader = find_leader(data)
-    leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
-    leader_score = score_effort(leader) if leader else None
-    leader_text = f"{leader_name} ({leader_score:.1f}%)" if leader_score is not None else "—"
 
     score_increased = current > previous
 
+    active_count = sum(
+        1 for effort in data["efforts"]
+        if isinstance(effort, dict) and not effort.get("nuked")
+    )
     print(
-        f"SURI: {current:.1f}% | FPS: {fps:g} | líder actual: {leader_text} "
-        f"| referencia: {previous:.1f}% | tracker: {updated}"
+        f"PORTWATCH GLOBAL: {current:.1f}% | líder: {leader_name} "
+        f"(id: {leader_id}) | FPS: {fps:g} | referencia: {previous:.1f}% "
+        f"| tracker: {updated} | proyectos activos: {active_count}"
     )
 
-    # Only notify when SURI's percentage increases. FPS and leader are
-    # refreshed in state.json below without generating separate notifications.
+    # Notify on every increase of the site's highest overall score, even 0.1.
+    # Refresh the leader and FPS on every check, including newly added projects/forks.
     if score_increased:
         send_notification(ntfy_topic, current, fps, leader_name)
-        print("Notificación enviada: ha aumentado el porcentaje de SURI.")
+        print("Notificación enviada: ha aumentado el récord global de PortWatch.")
     elif current < previous:
-        print("El porcentaje bajó; se actualiza la referencia sin avisar.")
+        print("El máximo global bajó; se actualiza la referencia sin avisar.")
     else:
-        print("El porcentaje no ha subido; no se envía notificación.")
+        print("El máximo global no ha subido; no se envía notificación.")
 
     today = datetime.now(timezone.utc).date().isoformat()
     new_values = {
         "last_score": current,
         "last_fps": fps,
         "last_leader": leader_name,
+        "last_leader_id": leader_id,
         "last_tracker_update": updated,
         "last_check_date": today,
     }
