@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: suri-progress-monitor
+  group: portwatch-global-progress-monitor
   cancel-in-progress: false
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
       - name: Descargar el repositorio
         uses: actions/checkout@v7
 
-      - name: Comprobar exclusivamente SURI y avisar si sube
+      - name: Comparar el máximo global y avisar si aumenta
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python monitor_suri.py
@@ -37,7 +37,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add state.json
           if ! git diff --cached --quiet; then
-            git commit -m "Actualizar referencia de progreso SURI"
+            git commit -m "Actualizar referencia del progreso global de PortWatch"
             git fetch origin main
             git rebase origin/main
             git push origin HEAD:main
