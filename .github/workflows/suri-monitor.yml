@@ -2,11 +2,13 @@ name: Vigilar progreso de SURI
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "monitor_suri.py"
       - ".github/workflows/suri-monitor.yml"
   schedule:
-    - cron: '3,13,23,33,43,53 * * * *'
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -19,12 +21,12 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@v7
 
-      - name: Comprobar el porcentaje y avisar si sube
+      - name: Comprobar exclusivamente SURI y avisar si sube
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python monitor_suri.py
