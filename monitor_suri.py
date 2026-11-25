@@ -77,11 +77,17 @@ def score_effort(effort: dict) -> float:
             score = max(score, previous_tick + value * (LADDER_TICKS[key] - previous_tick))
         break
 
+    stability_raw = gta.get("stability")
+    if isinstance(stability_raw, (int, float)) and math.isfinite(float(stability_raw)):
+        stability = clamp01(stability_raw)
+    else:
+        stability = STABILITY_VALUES.get(str(stability_raw or "unknown"), 0.0)
+
     tracks = {
         "story": clamp01(gta.get("story")),
         "render": clamp01(gta.get("render")),
         "perf": clamp01((float(gta.get("fps") or 0.0)) / 30.0),
-        "stability": STABILITY_VALUES.get(str(gta.get("stability") or "unknown"), 0.0),
+        "stability": stability,
     }
     quality = sum(TRACK_WEIGHTS[key] * value for key, value in tracks.items())
     if reached == "playable":
