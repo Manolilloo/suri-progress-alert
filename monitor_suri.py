@@ -209,12 +209,14 @@ def main() -> int:
     fps = round_one_decimal(float(gta.get("fps") or 0.0))
     leader = find_leader(data)
     leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
+    leader_score = score_effort(leader) if leader else None
+    leader_text = f"{leader_name} ({leader_score:.1f}%)" if leader_score is not None else "—"
 
     score_increased = current > previous
 
     print(
-        f"SURI: {current:.1f}% | FPS: {fps:g} | líder público: {leader_name} "
-        f"({leader_score:.1f}%) | referencia: {previous:.1f}% | tracker: {updated}" if leader_score is not None else f"| referencia: {previous:.1f}% | tracker: {updated}"
+        f"SURI: {current:.1f}% | FPS: {fps:g} | líder actual: {leader_text} "
+        f"| referencia: {previous:.1f}% | tracker: {updated}"
     )
 
     # Only notify when SURI's percentage increases. FPS and leader are
