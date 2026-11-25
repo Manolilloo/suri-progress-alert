@@ -1,4 +1,4 @@
-name: Vigilar progreso de SURI
+name: Vigilar progreso global de PortWatch
 
 on:
   push:
