@@ -121,29 +121,23 @@ def find_suri(data: dict) -> dict:
 
 
 def find_leader(data: dict) -> dict | None:
-    """Match PortWatch's public-code race: private builds are unranked."""
-    ranked = []
-    for effort in data.get("efforts", []):
-        if not isinstance(effort, dict):
-            continue
-        if effort.get("tier") != "tracked" or effort.get("nuked"):
-            continue
-        repository = effort.get("repo")
-        if not isinstance(repository, str) or "/" not in repository:
-            continue
-        stars = (effort.get("stats") or {}).get("stars") or 0
-        try:
-            stars = float(stars)
-        except (TypeError, ValueError):
-            stars = 0.0
-        ranked.append((score_effort(effort), stars, effort))
-
+    """Match PortWatch overall(): every non-nuked effort participates."""
+    ranked = [
+        effort for effort in data.get("efforts", [])
+        if isinstance(effort, dict) and not effort.get("nuked")
+    ]
     if not ranked:
         return None
-    # Same order as PortWatch: highest score first, stars break a tie.
-    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    return ranked[0][2]
 
+    def stars(effort: dict) -> float:
+        try:
+            return float((effort.get("stats") or {}).get("stars") or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # PortWatch overall() ranks all non-nuked efforts by score, then stars.
+    ranked.sort(key=lambda effort: (score_effort(effort), stars(effort)), reverse=True)
+    return ranked[0]
 
 def format_number(value: float, decimals: int = 1) -> str:
     return f"{value:.{decimals}f}".replace(".", ",")
