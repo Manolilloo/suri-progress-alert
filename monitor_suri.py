@@ -101,8 +101,9 @@ def score_effort(effort: dict) -> float:
 
 
 def fetch_tracker() -> dict:
+    cache_busted_url = f"{DATA_URL}?_={int(datetime.now(timezone.utc).timestamp())}"
     request = urllib.request.Request(
-        DATA_URL,
+        cache_busted_url,
         headers={
             "User-Agent": "SURI-Progress-Monitor/1.0",
             "Accept": "application/json",
