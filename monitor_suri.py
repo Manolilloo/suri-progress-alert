@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-Watch PortWatch's highest overall progress score and current leader; notify via ntfy.
+"""Watch PortWatch's highest overall progress score and current leader; notify via ntfy."""
 
 # Polling workflow refresh: keep the scheduled monitor active.
 from __future__ import annotations
