@@ -21,7 +21,6 @@ jobs:
           from monitor_suri import (
               fetch_tracker,
               find_leader,
-              find_suri,
               round_one_decimal,
               score_effort,
               send_notification,
@@ -32,12 +31,11 @@ jobs:
               raise SystemExit("Falta el secreto NTFY_TOPIC.")
 
           data = fetch_tracker()
-          suri = find_suri(data)
           leader = find_leader(data)
-          fps = round_one_decimal(float((suri.get("gta") or {}).get("fps") or 0))
-          leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
-          score = score_effort(suri)
-          print(f"Simulacro visual: {score:.1f}% | {fps:g} FPS | líder: {leader_name}")
+          fps = round_one_decimal(float((leader.get("gta") or {}).get("fps") or 0))
+          leader_name = str(leader.get("name") or leader.get("id") or "—")
+          score = score_effort(leader)
+          print(f"Simulacro visual GLOBAL: {score:.1f}% | {fps:g} FPS | líder: {leader_name}")
           send_notification(topic, score, fps, leader_name)
-          print("ntfy aceptó el simulacro de dos líneas.")
+          print("ntfy aceptó el simulacro del líder global.")
           PY
