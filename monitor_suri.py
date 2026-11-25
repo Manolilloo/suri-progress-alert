@@ -210,10 +210,6 @@ def main() -> int:
     leader = find_leader(data)
     leader_name = str((leader or {}).get("name") or (leader or {}).get("id") or "—")
 
-    last_fps = state.get("last_fps")
-    fps_changed = last_fps is not None and round_one_decimal(float(last_fps)) != fps
-    last_leader = state.get("last_leader")
-    leader_changed = last_leader is not None and str(last_leader) != leader_name
     score_increased = current > previous
 
     print(
@@ -221,19 +217,15 @@ def main() -> int:
         f"| referencia: {previous:.1f}% | tracker: {updated}"
     )
 
-    # Notify on any SURI percentage increase, any FPS change (up or down),
-    # or a change in the public race leader.
-    if score_increased or fps_changed or leader_changed:
+    # Only notify when SURI's percentage increases. FPS and leader are
+    # refreshed in state.json below without generating separate notifications.
+    if score_increased:
         send_notification(ntfy_topic, current, fps, leader_name)
-        print(
-            "Notificación enviada: "
-            f"score_increased={score_increased}, fps_changed={fps_changed}, "
-            f"leader_changed={leader_changed}"
-        )
+        print("Notificación enviada: ha aumentado el porcentaje de SURI.")
     elif current < previous:
         print("El porcentaje bajó; se actualiza la referencia sin avisar.")
     else:
-        print("Sin cambios relevantes; no se envía notificación.")
+        print("El porcentaje no ha subido; no se envía notificación.")
 
     today = datetime.now(timezone.utc).date().isoformat()
     new_values = {
