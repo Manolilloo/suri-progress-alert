@@ -1,38 +1,35 @@
 # Avisos de progreso de SURI
 
-Este repositorio consulta PortWatch VI cada 10 minutos desde GitHub Actions y envía avisos push a ntfy. No necesita que tu ordenador esté encendido.
+Este repositorio consulta los datos de PortWatch cada 5 minutos desde GitHub Actions y envía avisos al móvil mediante ntfy. No necesita que el ordenador esté encendido.
 
-## Formato de la notificación
+## Qué vigila
 
-Una sola línea:
+- El porcentaje se calcula exclusivamente para el proyecto cuyo `id` es `suri`.
+- Se envía una notificación únicamente cuando ese porcentaje sube, aunque sea solo 0,1 puntos.
+- El progreso general del tracker y el porcentaje del líder no activan alertas de SURI.
 
-`61,0 % ⚡ 3 FPS | hyphennn`
+## Qué aparece en la notificación
 
-- Porcentaje total actual de SURI, con la puntuación oficial de PortWatch.
-- FPS que PortWatch publica actualmente para SURI. Se actualiza tanto si sube como si baja.
-- Líder de la carrera pública de PortWatch. Los proyectos privados no tienen puesto en la clasificación oficial.
-- Al tocar la notificación se abre la ficha de SURI.
+Título: `Progreso GTAVI`
 
-No se cambia el icono de ntfy ni se envía una segunda imagen.
+Mensaje, en una sola línea:
 
-## Cuándo avisa
+`61,0 % ⚡ 3 FPS | Doomsday`
 
-- Cuando la puntuación de SURI aumenta, aunque sea 0,1 puntos.
-- Cuando cambian los FPS publicados para SURI, tanto al subir como al bajar.
-- Cuando cambia el líder de la clasificación pública.
+El porcentaje y los FPS pertenecen a SURI. El nombre final corresponde al líder actual de la clasificación general de PortWatch. Se vuelve a calcular en cada revisión con todos los proyectos que no estén retirados, incluidos los proyectos privados y los que se incorporen nuevos. Se usa el nombre del proyecto y, si no está disponible, su id.
 
-Una bajada aislada del porcentaje actualiza la referencia, pero no genera una alerta por sí sola.
+Un cambio de líder por sí solo no manda una notificación. Cuando SURI vuelva a subir, el aviso incluirá el líder que haya en ese momento, aunque haya cambiado varias veces desde el aviso anterior.
+
+Al tocar la notificación se abre la ficha de SURI: https://portwatch-vi.xyz/#effort-suri
 
 ## Configuración
 
-1. La aplicación ntfy de Google Play debe estar suscrita al tema.
-2. El repositorio necesita un secreto de Actions llamado `NTFY_TOPIC` con el tema de ntfy.
-3. En **Actions → Probar notificación móvil** se puede enviar un simulacro con los valores reales que haya publicado PortWatch.
+1. La aplicación ntfy debe estar suscrita al tema utilizado.
+2. El repositorio necesita un secreto de Actions llamado `NTFY_TOPIC` con ese tema.
+3. La acción `Vigilar progreso de SURI` comprueba los datos cada cinco minutos y también permite ejecuciones manuales desde GitHub Actions.
 
-## Fuente y límites
+## Fuente y funcionamiento
 
-El monitor lee `https://portwatch-vi.xyz/data/tracker.json` y replica el cálculo de `assets/js/scoring.js`. La clasificación pública se calcula igual que PortWatch: proyectos con código público, sin proyectos retirados, puntuación descendente y estrellas como desempate.
+El monitor consulta `https://portwatch-vi.xyz/data/tracker.json` sin usar caché y replica el cálculo de `assets/js/scoring.js`. Busca exactamente una entrada con `id: "suri"`; si no puede verificarla, falla sin inventar un porcentaje ni enviar una alerta.
 
-GitHub solicita una ejecución cada 10 minutos. Puede haber retrasos por carga de GitHub. PortWatch publica sus datos con menos frecuencia, por lo que consultar cada 10 minutos no adelanta su publicación.
-
-El FPS mostrado es el valor que PortWatch tenga publicado en ese momento, no un pico de FPS medido por el monitor entre actualizaciones.
+GitHub Actions puede retrasar una ejecución programada por carga del servicio. PortWatch también publica los datos por tandas, así que una revisión no implica que el porcentaje haya cambiado.
