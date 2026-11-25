@@ -103,7 +103,12 @@ def score_effort(effort: dict) -> float:
 def fetch_tracker() -> dict:
     request = urllib.request.Request(
         DATA_URL,
-        headers={\n            "User-Agent": "SURI-Progress-Monitor/1.0",\n            "Accept": "application/json",\n            "Cache-Control": "no-cache, no-store, max-age=0",\n            "Pragma": "no-cache",\n        },
+        headers={
+            "User-Agent": "SURI-Progress-Monitor/1.0",
+            "Accept": "application/json",
+            "Cache-Control": "no-cache, no-store, max-age=0",
+            "Pragma": "no-cache",
+        },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         if response.status != 200:
