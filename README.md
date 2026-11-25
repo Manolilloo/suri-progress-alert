@@ -33,7 +33,7 @@ Al tocar la notificación se abre PortWatch: https://portwatch-vi.xyz/
 
 1. La aplicación ntfy debe estar suscrita al tema correspondiente.
 2. El repositorio necesita un secreto de Actions llamado `NTFY_TOPIC` con ese tema.
-3. La acción `Vigilar progreso de SURI` se ejecuta cada cinco minutos. El nombre histórico de la acción no afecta a lo que vigila.
+3. La acción `Vigilar progreso global de PortWatch` se ejecuta cada cinco minutos. 
 4. `Probar notificación móvil` envía un simulacro con los datos del líder global actual.
 
 ## Fuente y funcionamiento
