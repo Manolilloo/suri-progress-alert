@@ -103,7 +103,7 @@ def score_effort(effort: dict) -> float:
 def fetch_tracker() -> dict:
     request = urllib.request.Request(
         DATA_URL,
-        headers={"User-Agent": "SURI-Progress-Monitor/1.0", "Accept": "application/json"},
+        headers={\n            "User-Agent": "SURI-Progress-Monitor/1.0",\n            "Accept": "application/json",\n            "Cache-Control": "no-cache, no-store, max-age=0",\n            "Pragma": "no-cache",\n        },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         if response.status != 200:
@@ -214,7 +214,7 @@ def main() -> int:
 
     print(
         f"SURI: {current:.1f}% | FPS: {fps:g} | líder público: {leader_name} "
-        f"| referencia: {previous:.1f}% | tracker: {updated}"
+        f"({leader_score:.1f}%) | referencia: {previous:.1f}% | tracker: {updated}" if leader_score is not None else f"| referencia: {previous:.1f}% | tracker: {updated}"
     )
 
     # Only notify when SURI's percentage increases. FPS and leader are
