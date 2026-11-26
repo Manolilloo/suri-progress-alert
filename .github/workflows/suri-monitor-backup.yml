@@ -1,0 +1,38 @@
+name: Respaldo de comprobación global
+
+on:
+  schedule:
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: portwatch-global-progress-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Comparar el máximo global y avisar si aumenta
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python monitor_suri.py
+
+      - name: Guardar el último porcentaje revisado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Actualizar referencia del progreso global de PortWatch"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
